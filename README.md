@@ -97,12 +97,6 @@ bun test tests/                  # offline tests
 JEV_LIVE=1 bun test tests/       # also runs the labelled sample through the API
 ```
 
-Compose-test against an official AI-DLC release for one harness (needs `gh`):
-
-```bash
-scripts/compose-test.sh claude 2.10.0
-```
-
 CI runs the offline tests, the compose test for every harness, and (on
 `main`, manually and weekly) the live sample when the `TYPESAFE_API_KEY`
 repository secret is set. Codex is allowed to fail until AI-DLC fixes its
@@ -110,18 +104,21 @@ Codex compose hook.
 
 ## Development
 
-Hooks run with [prek](https://github.com/j178/prek): actionlint, zizmor,
-shellcheck, gitleaks, pinact and basic file checks.
+Tool versions (bun, prek, pinact) live in `mise.toml`, with checksums pinned
+in `mise.lock`. CI installs them the same way through `jdx/mise-action`.
 
 ```bash
-scripts/install-lint-tools.sh     # pinned, checksum-verified prek and pinact
-prek install                      # run the hooks before each commit
-GITHUB_TOKEN=$(gh auth token) prek run --all-files
+mise install                      # bun, prek and pinact at the pinned versions
+mise run test                     # offline tests
+GITHUB_TOKEN=$(gh auth token) mise run lint     # all prek hooks
+mise run compose -- claude 2.10.0 # compose-test one harness (needs gh)
+mise exec -- prek install         # run the hooks before each commit
 ```
 
+Hooks: actionlint, zizmor, shellcheck, gitleaks, pinact and basic file checks.
 Actions are pinned to commit SHAs with verified version comments. Update them
-with `pinact run -u`; `.pinact.yaml` and Dependabot both hold back releases
-younger than 7 days.
+with `mise exec -- pinact run -u`; `.pinact.yaml` and Dependabot both hold
+back releases younger than 7 days.
 
 ## License
 

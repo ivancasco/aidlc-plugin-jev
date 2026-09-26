@@ -1,0 +1,21 @@
+# Tool versions for development and CI. `mise install` installs them;
+# mise.lock pins their checksums. CI uses jdx/mise-action with the same file.
+[tools]
+bun = "1.4.2"
+prek = "0.5.3"
+pinact = "5.0.0"
+
+[settings]
+lockfile = true
+
+[tasks.test]
+description = "Offline tests"
+run = "bun test tests/"
+
+[tasks.lint]
+description = "All prek hooks (pinact needs GITHUB_TOKEN)"
+run = "prek run --all-files --show-diff-on-failure"
+
+[tasks.compose]
+description = "Compose-test against an AI-DLC release: mise run compose -- <harness> [version]"
+run = "scripts/compose-test.sh"
