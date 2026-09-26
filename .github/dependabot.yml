@@ -1,7 +1,10 @@
 version: 2
 updates:
-  # Keeps the SHA-pinned actions in .github/workflows current.
+  # Keeps the SHA-pinned actions in .github/workflows current. The cooldown
+  # matches .pinact.yaml: a release must be 7 days old before it is proposed.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7

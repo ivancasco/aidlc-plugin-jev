@@ -108,6 +108,21 @@ CI runs the offline tests, the compose test for every harness, and (on
 repository secret is set. Codex is allowed to fail until AI-DLC fixes its
 Codex compose hook.
 
+## Development
+
+Hooks run with [prek](https://github.com/j178/prek): actionlint, zizmor,
+shellcheck, gitleaks, pinact and basic file checks.
+
+```bash
+scripts/install-lint-tools.sh     # pinned, checksum-verified prek and pinact
+prek install                      # run the hooks before each commit
+GITHUB_TOKEN=$(gh auth token) prek run --all-files
+```
+
+Actions are pinned to commit SHAs with verified version comments. Update them
+with `pinact run -u`; `.pinact.yaml` and Dependabot both hold back releases
+younger than 7 days.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

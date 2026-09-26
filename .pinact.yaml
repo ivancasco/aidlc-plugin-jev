@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/pinact/refs/heads/main/json-schema/pinact.json
+# pinact - https://github.com/suzuki-shunsuke/pinact
+# Pins every action to a commit SHA with a version comment. `pinact run -u`
+# updates to the newest release that is at least min_age days old, so a
+# freshly published (possibly compromised) release is never adopted at once.
+version: 3
+min_age:
+  value: 7
