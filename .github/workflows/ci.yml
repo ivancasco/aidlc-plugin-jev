@@ -15,18 +15,44 @@ permissions:
 env:
   # The AI-DLC release whose plugin tools and runtime the plugin is tested against.
   AIDLC_VERSION: "2.10.0"
-  BUN_VERSION: "1.4.2"
+
+# Every job installs bun, prek and pinact from mise.toml, verified against
+# the checksums in mise.lock, and caches the installs between runs.
 
 jobs:
+  lint:
+    name: Lint (prek)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+      # Hook environments (Go builds of actionlint and gitleaks, Python envs
+      # for zizmor and shellcheck) rebuild only when the hooks or tools change.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/prek
+          key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'mise.lock') }}
+      - name: Run hooks
+        env:
+          # pinact verifies pins and version comments through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: mise run lint
+
   unit:
     name: Offline tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - run: bun test tests/
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+      - run: mise run test
 
   compose:
     name: Compose (${{ matrix.harness }})
@@ -42,13 +68,16 @@ jobs:
     continue-on-error: ${{ matrix.harness == 'codex' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
       - name: Validate, build and compose-test
         env:
           GH_TOKEN: ${{ github.token }}
-        run: scripts/compose-test.sh "${{ matrix.harness }}" "$AIDLC_VERSION"
+          HARNESS: ${{ matrix.harness }}
+        run: mise run compose -- "$HARNESS" "$AIDLC_VERSION"
 
   live:
     name: Live labelled sample
@@ -60,9 +89,11 @@ jobs:
     environment: live
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
       - name: Run live test
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
@@ -75,4 +106,4 @@ jobs:
           fi
           [ -n "$TYPESAFE_BASE_URL" ] || unset TYPESAFE_BASE_URL
           [ -n "$JEV_MODEL" ] || unset JEV_MODEL
-          JEV_LIVE=1 bun test tests/
+          JEV_LIVE=1 mise exec -- bun test tests/

@@ -1,0 +1,46 @@
+# Hooks run by prek (https://github.com/j178/prek) locally before each commit
+# and in CI (`prek run --all-files`). Install locally with `prek install`.
+repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  # Workflow correctness.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # Workflow security (injection, excessive permissions, credential persistence).
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+
+  # Committed secrets.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      # Every action pinned to a SHA whose version comment is true. Needs the
+      # pinact binary and a GitHub token (GITHUB_TOKEN) for the API checks.
+      - id: pinact
+        name: pinact (actions pinned, comments verified)
+        entry: pinact run --check --verify-comment
+        language: system
+        files: ^\.github/workflows/
+        pass_filenames: false
