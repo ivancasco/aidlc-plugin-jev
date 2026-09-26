@@ -22,8 +22,8 @@ jobs:
     name: Offline tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - run: bun test tests/
@@ -38,11 +38,11 @@ jobs:
     # AI-DLC 2.10.0's compose hook looks for Codex skills under .codex/skills,
     # but the Codex runtime keeps them under .agents/skills, so any plugin
     # (including AI-DLC's own test-pro example) fails the idempotency check on
-    # Codex. Reported upstream; remove this once a fixed release is pinned.
+    # Codex. Not yet reported upstream; remove this once a fixed release is pinned.
     continue-on-error: ${{ matrix.harness == 'codex' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Validate, build and compose-test
@@ -53,12 +53,14 @@ jobs:
   live:
     name: Live labelled sample
     runs-on: ubuntu-latest
-    # Sends the synthetic fixture text to the Jev API. Needs the
-    # TYPESAFE_API_KEY secret; pull requests from forks never receive it.
+    # Sends the synthetic fixture text to the Jev API. The TYPESAFE_API_KEY
+    # secret lives in the `live` environment, which only `main` can deploy to;
+    # pull requests never run this job, and forks never receive secrets.
     if: github.event_name != 'pull_request'
+    environment: live
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Run live test
