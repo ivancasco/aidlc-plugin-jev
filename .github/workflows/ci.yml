@@ -17,7 +17,7 @@ env:
   AIDLC_VERSION: "2.10.0"
 
 # Every job installs bun, prek and pinact from mise.toml, verified against
-# the checksums in mise.lock.
+# the checksums in mise.lock, and caches the installs between runs.
 
 jobs:
   lint:
@@ -28,6 +28,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+      # Hook environments (Go builds of actionlint and gitleaks, Python envs
+      # for zizmor and shellcheck) rebuild only when the hooks or tools change.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/prek
+          key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'mise.lock') }}
       - name: Run hooks
         env:
           # pinact verifies pins and version comments through the GitHub API.
@@ -42,6 +50,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
       - run: mise run test
 
   compose:
@@ -61,6 +71,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
       - name: Validate, build and compose-test
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,6 +92,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
       - name: Run live test
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
