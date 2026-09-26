@@ -97,6 +97,17 @@ bun test tests/                  # offline tests
 JEV_LIVE=1 bun test tests/       # also runs the labelled sample through the API
 ```
 
+Compose-test against an official AI-DLC release for one harness (needs `gh`):
+
+```bash
+scripts/compose-test.sh claude 2.10.0
+```
+
+CI runs the offline tests, the compose test for every harness, and (on
+`main`, manually and weekly) the live sample when the `TYPESAFE_API_KEY`
+repository secret is set. Codex is allowed to fail until AI-DLC fixes its
+Codex compose hook.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

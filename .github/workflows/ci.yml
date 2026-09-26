@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly live run against the Jev API, to notice model or API drift.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  # The AI-DLC release whose plugin tools and runtime the plugin is tested against.
+  AIDLC_VERSION: "2.10.0"
+  BUN_VERSION: "1.4.2"
+
+jobs:
+  unit:
+    name: Offline tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun test tests/
+
+  compose:
+    name: Compose (${{ matrix.harness }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: [claude, codex, copilot, cursor, kiro, kiro-ide, opencode]
+    # AI-DLC 2.10.0's compose hook looks for Codex skills under .codex/skills,
+    # but the Codex runtime keeps them under .agents/skills, so any plugin
+    # (including AI-DLC's own test-pro example) fails the idempotency check on
+    # Codex. Reported upstream; remove this once a fixed release is pinned.
+    continue-on-error: ${{ matrix.harness == 'codex' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Validate, build and compose-test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/compose-test.sh "${{ matrix.harness }}" "$AIDLC_VERSION"
+
+  live:
+    name: Live labelled sample
+    runs-on: ubuntu-latest
+    # Sends the synthetic fixture text to the Jev API. Needs the
+    # TYPESAFE_API_KEY secret; pull requests from forks never receive it.
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Run live test
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          TYPESAFE_BASE_URL: ${{ vars.TYPESAFE_BASE_URL }}
+          JEV_MODEL: ${{ vars.JEV_MODEL }}
+        run: |
+          if [ -z "$TYPESAFE_API_KEY" ]; then
+            echo "::notice::TYPESAFE_API_KEY secret not set; skipping the live test."
+            exit 0
+          fi
+          [ -n "$TYPESAFE_BASE_URL" ] || unset TYPESAFE_BASE_URL
+          [ -n "$JEV_MODEL" ] || unset JEV_MODEL
+          JEV_LIVE=1 bun test tests/
