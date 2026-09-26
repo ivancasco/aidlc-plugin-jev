@@ -1,0 +1,14 @@
+{
+  "name": "jev",
+  "version": "0.1.0",
+  "description": "Document-quality gate checks for AI-DLC planning stages using TypeSafe's Jev classifier: requirement measurability, bundled requirements, user-story parts, section completeness and on-topic checks, as one advisory and one blocking gate sensor. Opt-in; sends planning-document text to TypeSafe (or OpenRouter).",
+  "author": { "name": "Ivan Casco" },
+  "dependencies": ["core"],
+  "aidlc": {
+    "contributes": {
+      "sensors": "sensors/",
+      "tools": "tools/",
+      "overlays": "contributions/"
+    }
+  }
+}
