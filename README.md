@@ -96,3 +96,7 @@ they are recorded in the audit log and the detail files under
 bun test tests/                  # offline tests
 JEV_LIVE=1 bun test tests/       # also runs the labelled sample through the API
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
