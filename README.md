@@ -38,18 +38,62 @@ leaves out; that stays with the reviewer.
 
 ## Install
 
-Requires AI-DLC 2.10 or later.
+Requires AI-DLC 2.10 or later, installed in the project.
 
-Build the host projection with the AI-DLC plugin tools, then install it through
-your harness's plugin mechanism (see the AI-DLC plugin guide):
+Each release publishes the plugin built for every AI-DLC harness to its own
+branch of this repository, with the host's plugin manifest and marketplace
+file at the branch root: `claude`, `codex`, `copilot`, `cursor`, `kiro`,
+`kiro-ide` and `opencode`. The branch always holds the latest release; a tag
+`vX.Y.Z-<harness>` (for example `v0.2.0-claude`) holds one release. `main` has
+the source only and cannot be installed directly. The marketplace is named
+`aidlc-plugins` and the plugin `aidlc-jev`.
+
+**Claude Code.** In a session:
+
+```text
+/plugin marketplace add ivancasco/aidlc-plugin-jev#claude
+/plugin install aidlc-jev@aidlc-plugins
+```
+
+or from a shell, `claude plugin marketplace add ivancasco/aidlc-plugin-jev#claude`
+then `claude plugin install aidlc-jev@aidlc-plugins`. Add `--scope project` to
+both to record them in the project's `.claude/settings.json` for everyone who
+works in it. Use `#v0.2.0-claude` instead of `#claude` to stay on one release.
+
+**Codex CLI.**
 
 ```bash
-bun <aidlc-tools-dir>/aidlc-plugin-validate.ts jev
-bun <aidlc-tools-dir>/aidlc-plugin-build.ts jev claude
+codex plugin marketplace add ivancasco/aidlc-plugin-jev --ref codex
+codex plugin add aidlc-jev@aidlc-plugins
 ```
+
+`--ref v0.2.0-codex` pins one release. AI-DLC 2.10.0's Codex compose hook
+fails its own idempotency check (see [Tests](#tests)), so the Codex install is
+not yet expected to compose cleanly.
+
+**Kiro and Kiro IDE.** Kiro has no plugin store. Copy the build into the
+project and run the composer, as the AI-DLC plugin guide describes. Use the
+`kiro-ide` branch for Kiro IDE 1.x and Kiro CLI v3 (it registers a
+SessionStart compose hook), `kiro` otherwise:
+
+```bash
+git clone --depth 1 --branch kiro-ide https://github.com/ivancasco/aidlc-plugin-jev.git /tmp/jev
+rm -rf /tmp/jev/.git /tmp/jev/README.md   # keep your project's README
+cp -R /tmp/jev/. <project>/
+AIDLC_PLUGIN_ROOT=/tmp/jev AIDLC_PROJECT_DIR=<project> \
+  AIDLC_HARNESS_DIR=.kiro aidlc engine plugin sync
+```
+
+**Copilot, Cursor, opencode.** The `copilot`, `cursor` and `opencode` branches
+hold those builds; install them with the harness's own plugin mechanism, as the
+[AI-DLC plugin guide](https://github.com/awslabs/aidlc-workflows) describes.
 
 Check the install with `/aidlc --doctor`: it confirms the plugin's files are
 composed and warns when no API key is set.
+
+To build the projections yourself, run `scripts/build-dist.sh <out-dir>`
+(needs bun and an authenticated `gh`): it writes `<out-dir>/<harness>/` for
+every harness with the plugin tools of an official AI-DLC release.
 
 ## Configuration
 

@@ -19,3 +19,7 @@ run = "prek run --all-files --show-diff-on-failure"
 [tasks.compose]
 description = "Compose-test against an AI-DLC release: mise run compose -- <harness> [version]"
 run = "scripts/compose-test.sh"
+
+[tasks.dist]
+description = "Build every harness projection: mise run dist -- <out-dir> [version]"
+run = "scripts/build-dist.sh"
