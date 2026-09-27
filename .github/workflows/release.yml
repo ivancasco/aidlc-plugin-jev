@@ -1,0 +1,32 @@
+name: Release
+
+# release-please keeps a release PR open that bumps the version (semver, from
+# conventional commit messages), updates CHANGELOG.md and plugin.json's
+# version. Merging that PR tags the release and publishes the GitHub Release.
+# AI-DLC plugins install from git by tag, so no build files are attached.
+#
+# The release PR is opened with the workflow token, so CI does not run on it;
+# an admin merges it through the ruleset's pull-request bypass.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release PR / tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
