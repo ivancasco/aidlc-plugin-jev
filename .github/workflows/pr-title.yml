@@ -1,0 +1,30 @@
+name: PR title
+
+# Pull requests are squash-merged with the PR title as the commit subject,
+# and release-please reads that subject to pick the version bump and the
+# changelog section. A title outside the conventional-commit form would
+# silently leave the change out of the next release.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  conventional:
+    name: Conventional title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types='feat|fix|perf|docs|ci|chore|test|refactor|build|revert|style'
+          if [[ "$TITLE" =~ ^($types)(\([a-z0-9._/-]+\))?!?:\ [^[:space:]] ]]; then
+            echo "OK: $TITLE"
+            exit 0
+          fi
+          echo "::error::PR title must be a conventional commit, e.g. 'fix: handle empty sections' or 'feat(sensor)!: rename checks'. Allowed types: ${types//|/, }."
+          echo "Got: $TITLE"
+          exit 1
