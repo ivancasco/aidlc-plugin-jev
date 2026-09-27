@@ -34,3 +34,12 @@ cp -R "$runtime/." "$project/"
 bun "$tools/aidlc-plugin-validate.ts" "$work/jev"
 bun "$tools/aidlc-plugin-build.ts" "$work/jev" "$harness"
 bun "$tools/aidlc-plugin-test.ts" "$work/jev" --install "$project" --harness "$harness"
+
+# The repo vendors AI-DLC's compose hook at hooks/compose.ts, because the
+# plugin is installed straight from git and AI-DLC's sync runs that file. It
+# must match what this AI-DLC release's build injects.
+if ! cmp -s "$work/jev/dist/${harness}/hooks/compose.ts" "$plugin_root/hooks/compose.ts"; then
+  echo "hooks/compose.ts differs from the one AI-DLC ${version} generates;" >&2
+  echo "refresh it: bun <tools>/aidlc-plugin-build.ts . ${harness} && cp dist/${harness}/hooks/compose.ts hooks/" >&2
+  exit 1
+fi
