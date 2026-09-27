@@ -55,18 +55,38 @@ handled well; that stays with `jev-quality` and the reviewer.
 
 ## Install
 
-Requires AI-DLC 2.10 or later.
+Requires AI-DLC 2.10 or later in the project.
 
-Build the host projection with the AI-DLC plugin tools, then install it through
-your harness's plugin mechanism (see the AI-DLC plugin guide):
+**Claude Code:**
+
+```
+/plugin marketplace add ivancasco/aidlc-plugin-jev
+/plugin install aidlc-jev@aidlc-jev
+```
+
+Add `#v0.2.0` (any release tag) to the marketplace address to pin a
+version. Then merge the plugin into the project's AI-DLC with:
 
 ```bash
-bun <aidlc-tools-dir>/aidlc-plugin-validate.ts jev
-bun <aidlc-tools-dir>/aidlc-plugin-build.ts jev claude
+aidlc engine plugin sync
+```
+
+**Other harnesses:** AI-DLC's sync needs a manifest for each harness
+(`.kiro-plugin/`, `.codex-plugin/`, …), and only Claude Code's is in the
+repo so far. Build the harness's copy with the AI-DLC plugin tools and install
+that (see the AI-DLC plugin guide):
+
+```bash
+bun <aidlc-tools-dir>/aidlc-plugin-build.ts . kiro
 ```
 
 Check the install with `/aidlc --doctor`: it confirms the plugin's files are
 composed and warns when no API key is set.
+
+The repo root is the plugin. `.aidlc-plugin/plugin.json` is the AI-DLC
+manifest; `.claude-plugin/` holds the two small files Claude Code and AI-DLC's
+sync read, and `hooks/compose.ts` is AI-DLC's merge step, which the sync runs.
+CI checks it matches the AI-DLC release in `AIDLC_VERSION`.
 
 ## Configuration
 

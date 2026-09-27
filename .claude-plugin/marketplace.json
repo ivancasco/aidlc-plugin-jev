@@ -1,0 +1,15 @@
+{
+  "name": "aidlc-jev",
+  "owner": {
+    "name": "Ivan Casco"
+  },
+  "description": "Jev document-quality checks for AI-DLC.",
+  "plugins": [
+    {
+      "name": "aidlc-jev",
+      "source": ".",
+      "version": "0.1.1",
+      "description": "Document-quality gate checks for AI-DLC planning stages using TypeSafe's Jev classifier: requirement measurability, bundled requirements, user-story parts, section completeness and on-topic checks, plus checklist gap detection on requirements, as two advisory and one blocking gate sensor. Opt-in; sends planning-document text to TypeSafe (or OpenRouter)."
+    }
+  ]
+}
