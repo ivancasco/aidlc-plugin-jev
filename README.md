@@ -1,6 +1,6 @@
 # jev — Jev document-quality checks for AI-DLC
 
-An [AI-DLC](https://github.com/awslabs/aidlc-workflows) plugin that adds two
+An [AI-DLC](https://github.com/awslabs/aidlc-workflows) plugin that adds three
 approval-gate checks to the planning stages, using
 [TypeSafe's Jev](https://docs.typesafe.ai) classifier. Jev returns typed
 judgments with calibrated probabilities instead of text, so the checks can
@@ -10,10 +10,12 @@ score a document piece by piece without asking a large model to read it.
 |---|---|---|
 | `jev-quality` | advisory | Per requirement: measurable success condition, bundled requirements, on-topic with the intent statement. Per story: actor, action and value present; Given/When/Then acceptance criteria. Per section: specific content rather than generic filler. Each result is flagged, unsure (for a person to look at) or fine. |
 | `jev-blocking` | blocking | Only serious, near-certain problems: a requirement with no success condition (probability ≥ 0.9), a story with no acceptance criteria, an empty or TBD section. The gate stays closed until the problem is fixed or a person records an override. |
+| `jev-gaps` | advisory | Concerns a requirements document never addresses although the product depends on them, from a fixed checklist: who a record belongs to, where reference data comes from, record lifecycle, access control, input validation, error messages, offline use, retention and more. |
 
-Both run when these stages open their approval gate: Intent Capture, Scope
-Definition, Requirements Analysis, User Stories, Units Generation and Delivery
-Planning. Requirement checks run only on `requirements.md` and story checks
+`jev-quality` and `jev-blocking` run when these stages open their approval
+gate: Intent Capture, Scope Definition, Requirements Analysis, User Stories,
+Units Generation and Delivery Planning. `jev-gaps` runs at the Requirements
+Analysis gate, on `requirements.md`. Requirement checks run only on `requirements.md` and story checks
 only on `stories.md`; elsewhere those IDs are references, so only sections are
 checked.
 
@@ -33,8 +35,23 @@ send it a whole document:
 - Code decides from the answer probabilities; scores such as
   `measurable 7/8` are counted in code, never by the model.
 
-It checks the quality of what is written. It cannot see what a document
-leaves out; that stays with the reviewer.
+`jev-quality` and `jev-blocking` check the quality of what is written.
+`jev-gaps` looks for what is left out, without asking Jev to reason about it:
+
+- The checklist of concerns comes from code: AI-DLC's requirements
+  completeness checklist, plus ownership, reference data and record
+  lifecycle.
+- For each concern Jev answers two narrow questions: is it addressed anywhere
+  (a requirement, constraint, assumption, out-of-scope line or open
+  question), and how much does the product in the intent statement depend on
+  it (not at its stated size, good practice only, or its main flow depends on
+  it).
+- A gap is a concern that matters and is not addressed. The relevance
+  question keeps a proof of concept from being told it lacks pagination or
+  localisation.
+
+It reports concerns that are missing, not whether an addressed concern is
+handled well; that stays with `jev-quality` and the reviewer.
 
 ## Install
 
@@ -61,16 +78,20 @@ composed and warns when no API key is set.
 | `JEV_FLAG` | `0.7` | Probability of a bad answer that flags |
 | `JEV_UNSURE` | `0.3` | Probability of a bad answer that marks a piece as unsure |
 | `JEV_BLOCK` | `0.9` | Probability of "no success condition" that blocks |
+| `JEV_GAPS_FLAG` | `0.5` | Probability of a gap that flags (`jev-gaps`) |
+| `JEV_GAPS_UNSURE` | `0.4` | Probability of a gap that marks a concern as unsure (`jev-gaps`) |
+| `JEV_GAPS_CHECKLIST` | (built in) | Path to a JSON array of `{"id": "snake_case", "concern": "one sentence"}` that replaces the default checklist |
 
 The variables must be visible to the environment AI-DLC's hooks run in.
 
-The default thresholds were tuned on the small labelled sample in
-`tests/fixtures/`. Check them against your own documents before relying on
+The default thresholds were tuned on the small labelled samples in
+`tests/fixtures/` (for `jev-gaps`, three requirements documents in
+`tests/fixtures/gaps/`). Check them against your own documents before relying on
 the blocking check.
 
 ## Without a key, or when the API is down
 
-`jev-quality` reports that it could not run and passes. `jev-blocking` still
+`jev-quality` and `jev-gaps` report that they could not run and pass. `jev-blocking` still
 enforces its code checks (missing acceptance criteria, empty or TBD sections),
 skips the Jev check, passes, and says why in its result. No approval gate is
 held up by a missing key or an outage.

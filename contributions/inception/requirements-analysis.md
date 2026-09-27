@@ -5,4 +5,5 @@ adds:
   sensors:
     - jev-quality
     - jev-blocking
+    - jev-gaps
 ---

@@ -778,4 +778,20 @@ async function main(argv: string[]): Promise<void> {
 
 if (import.meta.main) await main(process.argv.slice(2));
 
-export { band, judgeNoul, judgeScore, main, splitItems, splitSections };
+export {
+	type Answer,
+	type Bands,
+	type Question,
+	band,
+	evaluate,
+	findIntentStatement,
+	JevError,
+	judgeNoul,
+	judgeScore,
+	main,
+	mapLimit,
+	probabilityEnv,
+	round2,
+	splitItems,
+	splitSections,
+};
