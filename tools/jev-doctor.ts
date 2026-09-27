@@ -26,9 +26,12 @@ const checks = [
 	installed("sensors/aidlc-jev-blocking.md"),
 	installed("tools/aidlc-sensor-jev-quality.ts"),
 	installed("tools/aidlc-sensor-jev-blocking.ts"),
+	installed("sensors/aidlc-jev-gaps.md"),
+	installed("tools/aidlc-sensor-jev-gaps.ts"),
 	{
-		// Advisory: without a key jev-quality reports tool-unavailable and
-		// jev-blocking runs only its code checks. Both still pass.
+		// Advisory: without a key jev-quality and jev-gaps report
+		// tool-unavailable and jev-blocking runs only its code checks. All
+		// three still pass.
 		pass: Boolean(process.env.TYPESAFE_API_KEY),
 		label: "TYPESAFE_API_KEY set (Jev checks call the API)",
 		fix: "Set TYPESAFE_API_KEY in the environment AI-DLC hooks run in (a TypeSafe key, or an OpenRouter key with TYPESAFE_BASE_URL=https://openrouter.ai/api and JEV_MODEL=typesafe/jev-1.13).",

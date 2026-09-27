@@ -1,16 +1,17 @@
 // The jev plugin's own tests.
 //
-// Offline tests always run: document splitting, banding, and how both sensor
-// modes behave without an API key. The live test runs the labelled bakery
-// sample through the real Jev API and only runs when JEV_LIVE=1 and
-// TYPESAFE_API_KEY are set (it sends the fixture text to TypeSafe or the
-// configured TYPESAFE_BASE_URL).
+// Offline tests always run: document splitting, banding, the gap checklist,
+// and how the sensors behave without an API key. The live tests run the
+// labelled bakery sample and the labelled gap documents through the real Jev
+// API and only run when JEV_LIVE=1 and TYPESAFE_API_KEY are set (they send the
+// fixture text to TypeSafe or the configured TYPESAFE_BASE_URL).
 //
 // Run: bun test tests/
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -20,6 +21,13 @@ import {
 	splitItems,
 	splitSections,
 } from "../tools/aidlc-sensor-jev-quality.ts";
+import {
+	buildState,
+	DEFAULT_CHECKLIST,
+	judgeGap,
+	loadChecklist,
+	topLevel,
+} from "../tools/aidlc-sensor-jev-gaps.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TOOLS = join(HERE, "..", "tools");
@@ -28,6 +36,9 @@ const REQUIREMENTS = join(RECORD, "inception", "requirements-analysis", "require
 const STORIES = join(RECORD, "inception", "user-stories", "stories.md");
 const STORY_MAP = join(RECORD, "inception", "units-generation", "unit-of-work-story-map.md");
 const BANDS = { flag: 0.7, unsure: 0.3, block: 0.9 };
+const GAPS = join(HERE, "fixtures", "gaps");
+const gapDoc = (name: string) =>
+	join(GAPS, name, "inception", "requirements-analysis", "requirements.md");
 
 interface SensorRun {
 	status: number | null;
@@ -36,7 +47,7 @@ interface SensorRun {
 }
 
 function runSensor(
-	sensor: "jev-quality" | "jev-blocking",
+	sensor: "jev-quality" | "jev-blocking" | "jev-gaps",
 	file: string,
 	env: Record<string, string | undefined>,
 ): SensorRun {
@@ -156,6 +167,81 @@ describe("without an API key", () => {
 	});
 });
 
+describe("gap checklist", () => {
+	test("a gap needs the concern to be relevant and unaddressed", () => {
+		const bands = { flag: 0.5, unsure: 0.4, block: 1 };
+		expect(judgeGap("ownership", 0.75, 0.2, bands).band).toBe("flagged");
+		expect(judgeGap("offline", 0.5, 0.1, bands).band).toBe("unsure");
+		// Relevant but addressed, or unaddressed but irrelevant: no gap.
+		expect(judgeGap("concurrency", 0.9, 0.97, bands).band).toBe("fine");
+		expect(judgeGap("pagination", 0.05, 0.05, bands).band).toBe("fine");
+	});
+
+	test("relevance is the probability of the top Score level", () => {
+		expect(
+			topLevel({ type: "score", score: 0.7, confidence: 0.5, probabilities: { "0": 0.1, "1": 0.3, "2": 0.6 } }),
+		).toBeCloseTo(0.6);
+	});
+
+	test("Jev sees requirement lines and the other sections, not protocol ones", () => {
+		const { requirements, decisions } = buildState(readFileSync(gapDoc("bakery"), "utf-8"));
+		expect(requirements).toHaveLength(8);
+		expect(requirements[0]).toStartWith("- **FR1**");
+		expect(Object.keys(decisions)).toEqual([
+			"Intent Analysis",
+			"Constraints",
+			"Assumptions",
+			"Out of Scope",
+			"Open Questions",
+		]);
+	});
+
+	test("the default checklist has unique snake_case ids", () => {
+		const ids = DEFAULT_CHECKLIST.map((c) => c.id);
+		expect(new Set(ids).size).toBe(ids.length);
+		for (const id of ids) expect(id).toMatch(/^[a-z][a-z0-9_]*$/);
+	});
+
+	test("a project checklist replaces the default, and a malformed one is refused", () => {
+		const dir = mkdtempSync(join(tmpdir(), "jev-gaps-"));
+		const good = join(dir, "good.json");
+		const bad = join(dir, "bad.json");
+		writeFileSync(good, JSON.stringify([{ id: "allergens", concern: "Allergen information for each item." }]));
+		writeFileSync(bad, JSON.stringify([{ id: "Allergens", concern: "" }]));
+		const saved = process.env.JEV_GAPS_CHECKLIST;
+		try {
+			process.env.JEV_GAPS_CHECKLIST = good;
+			expect(loadChecklist().map((c) => c.id)).toEqual(["allergens"]);
+			process.env.JEV_GAPS_CHECKLIST = bad;
+			expect(() => loadChecklist()).toThrow("expected a non-empty JSON array");
+		} finally {
+			if (saved === undefined) delete process.env.JEV_GAPS_CHECKLIST;
+			else process.env.JEV_GAPS_CHECKLIST = saved;
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("without an API key it reports tool-unavailable", () => {
+		const run = runSensor("jev-gaps", gapDoc("bakery"), { TYPESAFE_API_KEY: "" });
+		expect(run.status).toBe(127);
+	});
+
+	test("documents other than requirements.md are skipped", () => {
+		const run = runSensor("jev-gaps", STORIES, { TYPESAFE_API_KEY: "" });
+		expect(run.status).toBe(0);
+		expect(run.json?.skipped).toBe(true);
+	});
+
+	test("an unreachable API is a script error", () => {
+		const run = runSensor("jev-gaps", gapDoc("bakery"), {
+			TYPESAFE_API_KEY: "test-key",
+			TYPESAFE_BASE_URL: "http://127.0.0.1:9",
+		});
+		expect(run.status).toBe(1);
+		expect(run.stderr).toContain("jev-gaps:");
+	});
+});
+
 const live = process.env.JEV_LIVE === "1" && Boolean(process.env.TYPESAFE_API_KEY);
 
 describe.if(live)("live: labelled sample", () => {
@@ -182,4 +268,38 @@ describe.if(live)("live: labelled sample", () => {
 		// the threshold, never a pattern of them.
 		expect(wrong.length).toBeLessThanOrEqual(1);
 	}, 180_000);
+});
+
+describe.if(live)("live: labelled gap documents", () => {
+	// Each document's reviewed gaps must be flagged; concerns a reviewer would
+	// never raise for it must not be. Concerns in neither list are left to
+	// judgment, since reviewers disagree on them.
+	const cases: Record<string, { gaps: string[]; never: string[] }> = {
+		bakery: {
+			gaps: ["ownership"],
+			never: ["pagination", "localisation", "export_import", "concurrency", "reference_data"],
+		},
+		"bakery-fixed": {
+			gaps: [],
+			never: ["ownership", "access_control", "pagination", "localisation", "export_import"],
+		},
+		inspection: {
+			gaps: ["offline"],
+			never: ["ownership", "notifications", "retention", "pagination", "localisation"],
+		},
+	};
+	for (const [name, expected] of Object.entries(cases)) {
+		test(name, () => {
+			const run = runSensor("jev-gaps", gapDoc(name), {});
+			expect(run.status).toBe(0);
+			const flagged = ((run.json?.findings as string[]) ?? [])
+				.filter((f) => !f.startsWith("unsure: "))
+				.map((f) => f.split(":")[0]);
+			const reported = ((run.json?.findings as string[]) ?? []).map((f) =>
+				f.replace(/^unsure: /, "").split(":")[0],
+			);
+			for (const gap of expected.gaps) expect(flagged).toContain(gap);
+			for (const id of expected.never) expect(reported).not.toContain(id);
+		}, 120_000);
+	}
 });
