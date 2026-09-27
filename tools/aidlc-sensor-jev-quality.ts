@@ -88,7 +88,9 @@ const ITEM_FILES: Record<string, "requirement" | "story"> = {
 	"stories.md": "story",
 };
 
-const ITEM_ID =/^\s*(?:[#>*|-]+\s*)*(?:\*\*)?\s*((?:N?FR|US)\d+(?:\.\d+)*)\b/;
+// One flat character class for the list, quote, table and bold markers before
+// an ID: a nested repeat here backtracks exponentially on a long `---` line.
+const ITEM_ID = /^[\s#>*|-]*((?:N?FR|US)\d+(?:\.\d+)*)\b/;
 const STORY_PATTERN = /\bas an?\b[\s\S]+?\bi (?:want|need|can)\b[\s\S]+?\bso that\b/i;
 const GIVEN_WHEN_THEN = /\bgiven\b[\s\S]*?\bwhen\b[\s\S]*?\bthen\b/i;
 const HAS_CRITERIA = /\bAC\d+(?:\.\d+)*\b|acceptance criteria|\bgiven\b/i;

@@ -75,6 +75,14 @@ describe("document splitting", () => {
 		expect(us11?.text).toContain("AC1.1.2");
 	});
 
+	test("a long divider line splits in linear time", () => {
+		const body = `## Functional\n${"-".repeat(5000)}\n- **FR1** Users can pre-order.\n`;
+		const started = performance.now();
+		const items = splitItems(body, "requirement");
+		expect(performance.now() - started).toBeLessThan(100);
+		expect(items.map((item) => item.id)).toEqual(["FR1"]);
+	});
+
 	test("protocol sections are not judged", () => {
 		const headings = splitSections(requirements).map((section) => section.id);
 		expect(headings).toContain("Out of Scope");
